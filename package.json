@@ -1,0 +1,26 @@
+{
+  "name": "bjasavr",
+  "version": "1.0.0",
+  "description": "",
+  "main": "discrod.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Bjaskular/BjasAVR/issues"
+  },
+  "homepage": "https://github.com/Bjaskular/BjasAVR#readme",
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
