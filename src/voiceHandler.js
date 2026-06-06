@@ -1,87 +1,12 @@
-require('dotenv').config();
+const { ChannelType, PermissionsBitField } = require('discord.js');
+const { userChannels, channelOwners } = require('./state');
 
-const { Client, GatewayIntentBits, ChannelType, PermissionsBitField } = require('discord.js');
 const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID;
 const CATEGORY_ID = process.env.CATEGORY_ID;
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildVoiceStates,
-    ]
-});
-
-const userChannels = new Map();
-const channelOwners = new Map();
-const userLocks = new Map();
-
-async function recoveryState() {
-    for (const guild of client.guilds.cache.values()) {
-        let channels;
-
-        try {
-            channels = await guild.channels.fetch();
-        } catch (err) {
-            console.error(`Failed to fetch channels for guild ${guild.id}:`, err);
-            continue;
-        }
-
-        for (const channel of channels.values()) {
-            if (
-                channel === null
-                || typeof channel === 'undefined'
-                || channel.type !== ChannelType.GuildVoice
-                || channel.parentId !== CATEGORY_ID
-                || channel.id === CREATE_CHANNEL_ID
-            ) {
-                continue;
-            }
-
-            const ownerOverwrite = channel.permissionOverwrites.cache.find(overwrite => 
-                overwrite.type === 1 && overwrite.allow.has(PermissionsBitField.Flags.ManageChannels)
-            );
-
-            if (ownerOverwrite === undefined) {
-                continue;
-            }
-
-            const ownerId = ownerOverwrite.id;
-            const currentMembers = guild.voiceStates.cache.filter(state => state.channelId === channel.id).size;
-
-            if (currentMembers === 0) {
-                await channel.delete().catch(() => {});
-                console.log(`Cleaned up empty channel on recovery: ${channel.name}`);
-            } else {
-                userChannels.set(ownerId, channel.id);
-                channelOwners.set(channel.id, ownerId);
-            }
-        }
-    }
-
-    console.log("Recovery completed");
-}
-
-function withUserLock(userId, callback) {
-    const prev = userLocks.get(userId) ?? Promise.resolve();
-    const next = prev
-        .catch(() => {})
-        .then(() => callback())
-        .catch(err => {
-            console.error(err);
-            throw err;
-        });
-
-    userLocks.set(userId, next);
-
-    return next.finally(() => {
-        if (userLocks.get(userId) === next) {
-            userLocks.delete(userId);
-        }
-    });
-}
-
-async function resolveVoiceChannels(member, oldState, newState) {
+async function resolveVoiceChannels(oldState, newState) {
     const guild = newState.guild;
+    const member = newState.member;
 
     if (
         typeof member === 'undefined'
@@ -108,7 +33,7 @@ async function resolveVoiceChannels(member, oldState, newState) {
 
         try {
             channel = await guild.channels.create({
-                name: `🔊 ${member.user.username}`,
+                name: `Kanał ${member.user.globalName}-a`,
                 type: ChannelType.GuildVoice,
                 parent: CATEGORY_ID,
                 permissionOverwrites: [
@@ -188,24 +113,4 @@ async function resolveVoiceChannels(member, oldState, newState) {
     }
 }
 
-client.once('ready', async () => {
-    console.log(`Zalogowano jako ${client.user.tag}`);
-    setTimeout(async () => {
-        await recoveryState();
-    }, 2000);
-});
-
-client.on('voiceStateUpdate', async (oldState, newState) => {
-    const member = newState.member ?? oldState.member;
-
-    if (typeof member === 'undefined' || member === null) {
-        return;
-    }
-
-    await withUserLock(
-        member.id,
-        async () => await resolveVoiceChannels(member, oldState, newState)
-    );
-});
-
-client.login(process.env.DISCORD_TOKEN);
+module.exports = { resolveVoiceChannels };
