@@ -19,10 +19,14 @@ function loadEvents(client) {
     for (const file of eventFiles) {
         const filePath = path.join(eventsPath, file);
         const event = require(filePath);
+
+        // TODO: In future, there might be more middleware types, so this should be refactored to support that.
+        // Maybe like an array of middlewares in event definition
+        // For now - YAGNI
         const safeExecute = errorMiddleware(event.execute, event.name);
 
         if (event.once === true) {
-            client.on(event.name, async (...args) => {
+            client.once(event.name, async (...args) => {
                 if (event.name === 'ready') {
                     setTimeout(async () => await safeExecute(...args), 2000);
                 } else {
@@ -30,7 +34,7 @@ function loadEvents(client) {
                 }
             });
         } else {
-            client.once(event.name, async (...args) => await safeExecute(...args));
+            client.on(event.name, async (...args) => await safeExecute(...args));
         }
 
         logger.info(`\t ↳ Event [${event.name}] has been auto secured.`);
