@@ -1,8 +1,10 @@
 const { ChannelType, PermissionsBitField } = require('discord.js');
 const { userChannels, channelOwners } = require('./state');
+const logger = require('./logger');
 
 const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID;
-const CATEGORY_ID = process.env.CATEGORY_ID;
+
+const getUsername = (username) => `${username}'s channel`;
 
 async function resolveVoiceChannels(oldState, newState) {
     const {guild, member} = newState;
@@ -35,12 +37,13 @@ async function handleChannelCreation(member, guild) {
     }
 
     let channel = null;
+    const channelName = getUsername(member.user?.globalName);
 
     try {
         channel = await guild.channels.create({
-            name: `Kanał ${member.user.globalName}-a`,
+            name: channelName,
             type: ChannelType.GuildVoice,
-            parent: CATEGORY_ID,
+            parent: member.voice.channel?.parentId,
             permissionOverwrites: [
                 {
                     id: member.id,
@@ -52,6 +55,7 @@ async function handleChannelCreation(member, guild) {
         await member.voice.setChannel(channel);
         userChannels.set(member.id, channel.id);
         channelOwners.set(channel.id, member.id);
+        logger.success(`User ${member.user.globalName} created channel: ${channelName}`);
     } catch (err) {
         if (channel) {
             await channel.delete().catch(() => {});
@@ -85,6 +89,7 @@ async function handleChannelLeave(channelId, member, guild) {
         }
             
         channelOwners.delete(fetchedChannel.id);
+        logger.success(`Channel "${fetchedChannel.name}" has been deleted`);
         return;
     }
 
@@ -109,7 +114,6 @@ async function handleChannelLeave(channelId, member, guild) {
 
         await fetchedChannel.permissionOverwrites.delete(ownerId);
     }
-    
 }
 
 module.exports = { resolveVoiceChannels };
