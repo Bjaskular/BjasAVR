@@ -48,13 +48,13 @@ async function resolveVoiceChannels(oldState, newState) {
             userChannels.set(member.id, channel.id);
             channelOwners.set(channel.id, member.id);
         } catch (err) {
-            console.error('VOICE CREATE FLOW ERROR: ', err);
-
             if (channel !== null && channel !== undefined) {
                 await channel.delete().catch(() => {});
                 userChannels.delete(member.id);
                 channelOwners.delete(channel.id);
             }
+
+            throw err;
         }
 
         return;
@@ -72,17 +72,13 @@ async function resolveVoiceChannels(oldState, newState) {
             const activeMembersCount = guild.voiceStates.cache.filter(state => state.channelId === fetchedChannel.id).size;
 
             if (activeMembersCount === 0) {
-                try {
-                    await fetchedChannel.delete();
+                await fetchedChannel.delete();
 
-                    if (ownerId !== undefined && ownerId !== null && ownerId !== '') {
-                        userChannels.delete(ownerId);
-                    }
-                        
-                    channelOwners.delete(fetchedChannel.id);
-                } catch (err) {
-                    console.error('DELETE CHANNEL ERROR: ', err);
+                if (ownerId !== undefined && ownerId !== null && ownerId !== '') {
+                    userChannels.delete(ownerId);
                 }
+                    
+                channelOwners.delete(fetchedChannel.id);
             } else if (member.id === ownerId) {
                 const targetVoiceState = guild.voiceStates.cache.find(
                     state => state.channelId === fetchedChannel.id
@@ -98,16 +94,12 @@ async function resolveVoiceChannels(oldState, newState) {
                 userChannels.set(newOwnerId, fetchedChannel.id);
                 channelOwners.set(fetchedChannel.id, newOwnerId);
 
-                try {
-                    await fetchedChannel.permissionOverwrites.create(newOwnerId, {
-                        ManageChannels: true,
-                        Connect: true
-                    });
+                await fetchedChannel.permissionOverwrites.create(newOwnerId, {
+                    ManageChannels: true,
+                    Connect: true
+                });
 
-                    await fetchedChannel.permissionOverwrites.delete(ownerId).catch(() => {});
-                } catch (err) {
-                    console.error('Error updating permissions: ', err);
-                }
+                await fetchedChannel.permissionOverwrites.delete(ownerId);
             }
         } 
     }

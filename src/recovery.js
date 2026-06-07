@@ -1,5 +1,6 @@
 const {ChannelType, PermissionsBitField} = require('discord.js');
 const {userChannels, channelOwners} = require('./state');
+const logger = require('./logger');
 
 const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID;
 const CATEGORY_ID = process.env.CATEGORY_ID;
@@ -11,7 +12,7 @@ async function recoveryState(client) {
         try {
             channels = await guild.channels.fetch();
         } catch (err) {
-            console.error(`Failed to fetch channels for guild ${guild.id}:`, err);
+            logger.error(`Failed to fetch channels for guild ${guild.id}:`, err);
             continue;
         }
 
@@ -38,8 +39,7 @@ async function recoveryState(client) {
             const currentMembers = guild.voiceStates.cache.filter(state => state.channelId === channel.id).size;
 
             if (currentMembers === 0) {
-                await channel.delete().catch(() => {});
-                console.log(`Cleaned up empty channel on recovery: ${channel.name}`);
+                await channel.delete();
             } else {
                 userChannels.set(ownerId, channel.id);
                 channelOwners.set(channel.id, ownerId);
@@ -47,7 +47,7 @@ async function recoveryState(client) {
         }
     }
 
-    console.log('Recovery completed');
+    logger.info('Recovery completed');
 }
 
 module.exports = { recoveryState };

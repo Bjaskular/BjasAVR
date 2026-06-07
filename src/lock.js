@@ -6,7 +6,6 @@ function withUserLock(userId, callback) {
         .catch(() => {})
         .then(() => callback())
         .catch(err => {
-            console.error(err);
             throw err;
         });
 
