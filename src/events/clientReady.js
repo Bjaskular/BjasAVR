@@ -6,9 +6,6 @@ module.exports = {
     name: 'clientReady',
     once: true,
     async execute(client) {
-        const CATEGORY_ID = process.env.CATEGORY_ID;
-        const CREATE_CHANNEL_ID = process.env.CREATE_CHANNEL_ID;
-
         logger.info(`Logged in as ${client.user.tag}`);
 
         for (const guild of client.guilds.cache.values()) {
@@ -22,13 +19,7 @@ module.exports = {
             }
 
             for (const channel of channels.values()) {
-                if (
-                    channel === null
-                    || typeof channel === 'undefined'
-                    || channel.type !== ChannelType.GuildVoice
-                    || channel.parentId !== CATEGORY_ID
-                    || channel.id === CREATE_CHANNEL_ID
-                ) {
+                if (!channel || channel.type !== ChannelType.GuildVoice) {
                     continue;
                 }
 
@@ -36,7 +27,7 @@ module.exports = {
                     overwrite.type === 1 && overwrite.allow.has(PermissionsBitField.Flags.ManageChannels)
                 );
 
-                if (ownerOverwrite === undefined) {
+                if (!ownerOverwrite) {
                     continue;
                 }
 
@@ -45,6 +36,7 @@ module.exports = {
 
                 if (currentMembers === 0) {
                     await channel.delete();
+                    logger.warn(`Orphaned channel "${channel.name}" has been deleted`);
                 } else {
                     userChannels.set(ownerId, channel.id);
                     channelOwners.set(channel.id, ownerId);
