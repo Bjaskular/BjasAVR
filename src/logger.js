@@ -22,7 +22,7 @@ const logger = {
     },
 
     warn(message) {
-        console.log(`${COLORS.warning}[${getTimestamp()}] [WARN] ${message}${COLORS.reset}`);
+        console.log(`${COLORS.warn}[${getTimestamp()}] [WARN] ${message}${COLORS.reset}`);
     },
 
     error(message, errorObj = '') {
